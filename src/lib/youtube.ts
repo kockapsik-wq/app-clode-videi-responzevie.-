@@ -22,13 +22,3 @@ export function extractYouTubeId(rawUrl: string): string | null {
 export function isYouTubeUrl(rawUrl: string): boolean {
   return extractYouTubeId(rawUrl) !== null;
 }
-
-export function thumbnailUrl(videoId: string): string {
-  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-}
-
-export interface OEmbedData {
-  title: string;
-  authorName: string;
-  thumbnailUrl: string;
-}

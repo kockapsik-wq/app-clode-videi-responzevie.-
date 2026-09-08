@@ -4,36 +4,101 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { isYouTubeUrl } from "@/lib/youtube";
 import ResultCard, { type ClipResult } from "@/components/ResultCard";
 
-type Status = "idle" | "loading" | "processing" | "done" | "error";
+type Status = "idle" | "starting" | "processing" | "done" | "error";
 
-const PROCESSING_STEPS = [
-  "Stahuji video…",
-  "Hledám nejzajímavější moment…",
-  "Generuji titulky…",
-  "Skládám finální klip…",
-];
+type Stage =
+  | "queued"
+  | "downloading"
+  | "transcribing"
+  | "selecting_highlight"
+  | "rendering"
+  | "done"
+  | "error";
 
-const MOCK_CAPTIONS = [
-  "Tohle je moment, kdy se to celé zlomilo.",
-  "Nikdo nevěřil, že by to mohlo vyjít.",
-  "A pak se stalo něco, co nikdo nečekal.",
-  "Přesně kvůli tomuhle to video sleduju.",
-];
+const STAGE_LABELS: Record<Stage, string> = {
+  queued: "Ve frontě…",
+  downloading: "Stahuji video z YouTube…",
+  transcribing: "Přepisuji řeč na text…",
+  selecting_highlight: "Hledám nejzajímavější moment…",
+  rendering: "Skládám finální klip a vypaluji titulky…",
+  done: "Hotovo",
+  error: "Chyba",
+};
+
+interface JobResponse {
+  id: string;
+  stage: Stage;
+  progress: number;
+  title: string | null;
+  authorName: string | null;
+  thumbnailUrl: string | null;
+  highlight: {
+    startMs: number;
+    endMs: number;
+    captions: { startMs: number; endMs: number; text: string }[];
+  } | null;
+  error: string | null;
+  downloadUrl: string | null;
+}
+
+const POLL_INTERVAL_MS = 1200;
 
 export default function ClipGenerator() {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stage, setStage] = useState<Stage>("queued");
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ClipResult | null>(null);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const activeTimers = timers.current;
     return () => {
-      activeTimers.forEach(clearTimeout);
+      if (pollTimer.current) clearTimeout(pollTimer.current);
     };
   }, []);
+
+  function pollJob(jobId: string) {
+    async function tick() {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
+        const data = (await res.json()) as JobResponse;
+
+        if (!res.ok) {
+          setError(data.error ?? "Úlohu se nepodařilo najít.");
+          setStatus("error");
+          return;
+        }
+
+        setStage(data.stage);
+        setProgress(data.progress);
+
+        if (data.stage === "error") {
+          setError(data.error ?? "Zpracování videa selhalo.");
+          setStatus("error");
+          return;
+        }
+
+        if (data.stage === "done" && data.downloadUrl) {
+          setResult({
+            title: data.title ?? "Video bez názvu",
+            authorName: data.authorName ?? "Neznámý autor",
+            downloadUrl: data.downloadUrl,
+            captions: data.highlight?.captions.map((c) => c.text) ?? [],
+          });
+          setStatus("done");
+          return;
+        }
+
+        pollTimer.current = setTimeout(tick, POLL_INTERVAL_MS);
+      } catch {
+        setError("Ztraceno spojení se serverem. Zkus to prosím znovu.");
+        setStatus("error");
+      }
+    }
+
+    tick();
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,38 +110,27 @@ export default function ClipGenerator() {
       return;
     }
 
-    setStatus("loading");
+    setStatus("starting");
     setResult(null);
+    setProgress(0);
 
     try {
-      const res = await fetch(`/api/oembed?url=${encodeURIComponent(url)}`);
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Video se nepodařilo načíst.");
+        setError(data.error ?? "Video se nepodařilo zpracovat.");
         setStatus("error");
         return;
       }
 
       setStatus("processing");
-      setStepIndex(0);
-
-      PROCESSING_STEPS.forEach((_, i) => {
-        const t = setTimeout(() => setStepIndex(i), i * 700);
-        timers.current.push(t);
-      });
-
-      const finalTimer = setTimeout(() => {
-        setResult({
-          title: data.title,
-          authorName: data.authorName,
-          thumbnailUrl: data.thumbnailUrl,
-          videoId: data.videoId,
-          captions: MOCK_CAPTIONS,
-        });
-        setStatus("done");
-      }, PROCESSING_STEPS.length * 700 + 500);
-      timers.current.push(finalTimer);
+      setStage("queued");
+      pollJob(data.jobId);
     } catch {
       setError("Něco se pokazilo. Zkus to prosím znovu.");
       setStatus("error");
@@ -84,13 +138,15 @@ export default function ClipGenerator() {
   }
 
   function reset() {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
     setStatus("idle");
     setResult(null);
     setError(null);
     setUrl("");
+    setProgress(0);
   }
 
-  const isBusy = status === "loading" || status === "processing";
+  const isBusy = status === "starting" || status === "processing";
 
   return (
     <section id="vyzkouset" className="mx-auto max-w-3xl px-6 py-10">
@@ -124,24 +180,23 @@ export default function ClipGenerator() {
         {isBusy && (
           <div className="mt-6">
             <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-pink-100">
-              <div className="relative h-full w-full">
-                <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-brand-400 to-brand-500 animate-shimmer" />
-              </div>
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-500 transition-all duration-500"
+                style={{ width: `${Math.max(6, progress)}%` }}
+              />
             </div>
             <p className="text-sm font-medium text-foreground/60">
-              {status === "loading" ? "Načítám video…" : PROCESSING_STEPS[stepIndex]}
+              {status === "starting" ? "Připravuji úlohu…" : STAGE_LABELS[stage]}
             </p>
           </div>
         )}
 
-        {status === "done" && result && (
-          <ResultCard result={result} onReset={reset} />
-        )}
+        {status === "done" && result && <ResultCard result={result} onReset={reset} />}
       </div>
 
       <p className="mt-4 text-center text-xs text-foreground/40">
-        Ukázka rozhraní — reálné stříhání videa a přepis řeči zatím nejsou
-        napojené na video engine.
+        Zpracování reálně stahuje video z YouTube, přepisuje řeč a vypaluje
+        titulky na serveru — u delších videí to může trvat i několik minut.
       </p>
     </section>
   );

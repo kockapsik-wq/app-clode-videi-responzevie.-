@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup:system": "bash scripts/setup-system-deps.sh",
+    "setup:whisper": "bash scripts/setup-whisper.sh"
   },
   "dependencies": {
     "next": "16.3.4",

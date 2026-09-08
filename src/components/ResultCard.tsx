@@ -1,12 +1,9 @@
 "use client";
 
-import Image from "next/image";
-
 export interface ClipResult {
   title: string;
   authorName: string;
-  thumbnailUrl: string;
-  videoId: string;
+  downloadUrl: string;
   captions: string[];
 }
 
@@ -20,33 +17,21 @@ export default function ResultCard({
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
       <div className="relative aspect-[9/16] w-56 shrink-0 overflow-hidden rounded-2xl bg-black shadow-soft">
-        <Image
-          src={result.thumbnailUrl}
-          alt={result.title}
-          fill
-          sizes="224px"
-          className="scale-125 object-cover opacity-80"
+        <video
+          src={result.downloadUrl}
+          controls
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
-
-        <span className="absolute left-3 top-3 rounded-full bg-brand-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+        <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-brand-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
           Nejlepší moment
         </span>
-        <span className="absolute right-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold text-white">
-          0:00–0:15
+        <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold text-white">
+          15 s
         </span>
-
-        <div className="absolute inset-x-3 bottom-4 flex h-10 items-center justify-center text-center">
-          {result.captions.map((caption, i) => (
-            <span
-              key={i}
-              style={{ animationDelay: `${i * 3.2}s` }}
-              className="absolute rounded-lg bg-black/60 px-3 py-1.5 text-[13px] font-bold leading-snug text-white opacity-0 [animation:caption-cycle_12.8s_ease-in-out_infinite]"
-            >
-              {caption}
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-4">
@@ -75,15 +60,21 @@ export default function ResultCard({
           </li>
         </ul>
 
+        {result.captions.length > 0 && (
+          <div className="rounded-xl bg-pink-50/60 p-3 text-xs text-foreground/60">
+            <p className="mb-1 font-semibold text-brand-600">Přepis titulků</p>
+            <p className="leading-relaxed">{result.captions.join(" ")}</p>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            title="Stažení bude dostupné po napojení video enginu"
-            disabled
-            className="cursor-not-allowed rounded-xl bg-brand-200 px-5 py-2.5 text-sm font-semibold text-brand-800/70"
+          <a
+            href={result.downloadUrl}
+            download
+            className="rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-600"
           >
             Stáhnout klip
-          </button>
+          </a>
           <button
             type="button"
             onClick={onReset}
