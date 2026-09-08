@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+vendor
+models
+tmp-jobs
+*.log
+.env
+.env.*
+!.env.example

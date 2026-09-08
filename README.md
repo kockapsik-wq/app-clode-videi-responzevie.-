@@ -66,6 +66,24 @@ minut podle délky videa a výkonu serveru (přepis řeči běží na CPU).
 serveru se rozpracované/dokončené úlohy ztratí. Pro provoz s více
 instancemi by bylo potřeba sdílenou frontu a úložiště.
 
+### Nasazení přes Docker (Railway, Render, Fly.io, VPS…)
+
+V repozitáři je `Dockerfile`, který v build kroku sám zkompiluje
+whisper.cpp, stáhne AI model a nainstaluje ffmpeg/yt-dlp — není potřeba nic
+ručně připravovat, jen mít platformu, která umí nasadit `Dockerfile` z
+GitHub repozitáře a naslouchá na proměnné prostředí `PORT`.
+
+```bash
+docker build -t strihai .
+docker run -p 3000:3000 strihai
+```
+
+Build stahuje ~150MB AI model, takže první sestavení trvá déle (v řádu
+minut). Sandbox, ve kterém appka vznikla, blokuje přístup na
+huggingface.co i Docker Hub, takže build nešlo ověřit end-to-end přímo
+tady — na běžné nasazovací platformě s normálním internetem by ale měl
+projít bez zásahu.
+
 ## Právní upozornění
 
 Stahuj a stříhej pouze videa, ke kterým máš práva nebo odpovídající
