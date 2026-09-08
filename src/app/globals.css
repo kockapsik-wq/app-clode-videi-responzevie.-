@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fffbfd;
+  --foreground: #241a22;
+
+  --color-pink-50: #fff0f7;
+  --color-pink-100: #ffe0ef;
+  --color-pink-200: #ffbfdf;
+  --color-pink-300: #ff8fc4;
+  --color-pink-400: #ff5ba6;
+  --color-pink-500: #f52d8e;
+  --color-pink-600: #e0157a;
+  --color-pink-700: #b90f63;
+  --color-pink-800: #8f0c4d;
+  --color-pink-900: #5c0731;
+
+  --shadow-soft: 0 20px 60px -20px rgba(245, 45, 142, 0.35);
+  --shadow-card: 0 8px 30px -12px rgba(36, 26, 34, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jakarta);
+
+  --color-brand-50: var(--color-pink-50);
+  --color-brand-100: var(--color-pink-100);
+  --color-brand-200: var(--color-pink-200);
+  --color-brand-300: var(--color-pink-300);
+  --color-brand-400: var(--color-pink-400);
+  --color-brand-500: var(--color-pink-500);
+  --color-brand-600: var(--color-pink-600);
+  --color-brand-700: var(--color-pink-700);
+  --color-brand-800: var(--color-pink-800);
+  --color-brand-900: var(--color-pink-900);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+.bg-grid-fade {
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(245, 45, 142, 0.14), transparent 40%),
+    radial-gradient(circle at 85% 0%, rgba(255, 139, 198, 0.18), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(245, 45, 142, 0.08), transparent 50%);
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(95deg, #f52d8e 0%, #ff6fb0 50%, #ffa5cf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes caption-cycle {
+  0%,
+  28% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  33%,
+  100% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.animate-shimmer {
+  animation: progress-shimmer 1.6s ease-in-out infinite;
+}
